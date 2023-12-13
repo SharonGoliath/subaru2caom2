@@ -54,10 +54,9 @@
       </caom2:metrics>
       <caom2:artifacts>
         <caom2:artifact caom2:id="f5dca8f2-1e75-4887-8fcb-721e136adc04" caom2:metaProducer="subaru2caom2/0.1.0">
-          <caom2:uri>cadc:SUBARUCADC/SCLA_189.232+62.201.W-C-IC.cat</caom2:uri>
+          <caom2:uri>cadc:SUBARUCADC/SCLA_189.232+62.201.W-C-IC.cat.header</caom2:uri>
           <caom2:productType>auxiliary</caom2:productType>
           <caom2:releaseType>data</caom2:releaseType>
-          <caom2:contentType>application/fits</caom2:contentType>
           <caom2:parts/>
         </caom2:artifact>
         <caom2:artifact caom2:id="89fa3d4e-e093-4650-b679-2d9af360c7cf" caom2:metaProducer="subaru2caom2/0.1.0">
@@ -423,10 +422,9 @@
           </caom2:parts>
         </caom2:artifact>
         <caom2:artifact caom2:id="fe3d4da0-d4e5-44cb-9c34-5d2bde8ba63e" caom2:metaProducer="subaru2caom2/0.1.0">
-          <caom2:uri>cadc:SUBARUCADC/SCLA_189.232+62.201.W-S-I.cat</caom2:uri>
+          <caom2:uri>cadc:SUBARUCADC/SCLA_189.232+62.201.W-S-I.cat.header</caom2:uri>
           <caom2:productType>auxiliary</caom2:productType>
           <caom2:releaseType>data</caom2:releaseType>
-          <caom2:contentType>application/fits</caom2:contentType>
           <caom2:parts/>
         </caom2:artifact>
       </caom2:artifacts>
@@ -678,10 +676,9 @@
       </caom2:metrics>
       <caom2:artifacts>
         <caom2:artifact caom2:id="b39e6bd6-82fd-48ac-8abc-255950993ecb" caom2:metaProducer="subaru2caom2/0.1.0">
-          <caom2:uri>cadc:SUBARUCADC/SCLA_189.232+62.201.W-S-Z.cat</caom2:uri>
+          <caom2:uri>cadc:SUBARUCADC/SCLA_189.232+62.201.W-S-Z.cat.header</caom2:uri>
           <caom2:productType>auxiliary</caom2:productType>
           <caom2:releaseType>data</caom2:releaseType>
-          <caom2:contentType>application/fits</caom2:contentType>
           <caom2:parts/>
         </caom2:artifact>
         <caom2:artifact caom2:id="e7dbc45c-c0d9-4632-831f-1f3fbc42a1d4" caom2:metaProducer="subaru2caom2/0.1.0">
@@ -877,10 +874,9 @@
       </caom2:metrics>
       <caom2:artifacts>
         <caom2:artifact caom2:id="3f17b69b-2cc1-4623-8976-a4a8e8ded968" caom2:metaProducer="subaru2caom2/0.1.0">
-          <caom2:uri>cadc:SUBARUCADC/SCLA_189.232+62.201.W-J-V.cat</caom2:uri>
+          <caom2:uri>cadc:SUBARUCADC/SCLA_189.232+62.201.W-J-V.cat.header</caom2:uri>
           <caom2:productType>auxiliary</caom2:productType>
           <caom2:releaseType>data</caom2:releaseType>
-          <caom2:contentType>application/fits</caom2:contentType>
           <caom2:parts/>
         </caom2:artifact>
         <caom2:artifact caom2:id="76e62212-c2e5-4a77-a4c6-866a6b61dc05" caom2:metaProducer="subaru2caom2/0.1.0">

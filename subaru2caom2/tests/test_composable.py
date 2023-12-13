@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # ***********************************************************************
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -67,28 +66,33 @@
 # ***********************************************************************
 #
 
-import logging
 import os
-import test_main_app
 
 from collections import deque
-from datetime import datetime, timedelta, timezone
-from tempfile import TemporaryDirectory
+from datetime import datetime, timedelta
 from mock import ANY, Mock, patch
 
+from caom2pipe import astro_composable as ac
 from caom2pipe import data_source_composable as dsc
 from caom2pipe import manage_composable as mc
-from subaru2caom2 import composable, SubaruName, SCLA_BOOKMARK
+from subaru2caom2 import composable, SubaruName # , SCLA_BOOKMARK
 
 
 @patch('caom2pipe.client_composable.ClientCollection')
 @patch('caom2pipe.execute_composable.OrganizeExecutes.do_one')
-def test_run(run_mock, clients_mock):
+def test_run(run_mock, clients_mock, test_config, tmp_path):
+    test_config.change_working_directory(tmp_path)
+    test_config.task_types = [mc.TaskType.INGEST]
+    test_config.logging_level = 'DEBUG'
     test_obs_id = 'SUPA0014258'
     test_f_name = 'SUPA0014258p.weight.fits.fz'
-    getcwd_orig = os.getcwd
-    os.getcwd = Mock(return_value=test_main_app.TEST_DATA_DIR)
+    orig_cwd = os.getcwd()
     try:
+        os.chdir(tmp_path)
+        test_config.write_to_file(test_config)
+        with open(test_config.work_fqn, 'w') as f:
+            f.write(f'{test_f_name}\n')
+
         # execution
         composable._run()
         assert run_mock.called, 'should have been called'
@@ -98,14 +102,13 @@ def test_run(run_mock, clients_mock):
         assert test_storage.obs_id == test_obs_id, 'wrong obs id'
         assert test_storage.file_name == test_f_name, 'wrong file name'
     finally:
-        os.getcwd = getcwd_orig
-        _cleanup()
+        os.chdir(orig_cwd)
 
 
 @patch('subaru2caom2.composable.Client', autospec=True)
 @patch('caom2pipe.client_composable.ClientCollection', autospec=True)
 @patch('caom2pipe.execute_composable.OrganizeExecutes.do_one', autospec=True)
-def test_run_remote(run_mock, clients_mock, vo_client_mock):
+def test_run_remote(run_mock, clients_mock, vo_client_mock, test_data_dir):
     test_obs_id = 'SUPA0014258'
     test_f_name = 'SUPA0014258p.weight.fits.fz'
     vo_client_mock.return_value.listdir.return_value = [test_f_name]
@@ -121,7 +124,7 @@ def test_run_remote(run_mock, clients_mock, vo_client_mock):
     vo_client_mock.return_value.get_node.return_value = node1
 
     getcwd_orig = os.getcwd
-    os.getcwd = Mock(return_value=test_main_app.TEST_DATA_DIR)
+    os.getcwd = Mock(return_value=test_data_dir)
     try:
         # execution
         composable._run_remote()
@@ -133,9 +136,10 @@ def test_run_remote(run_mock, clients_mock, vo_client_mock):
         assert test_storage.file_name == test_f_name, 'wrong file name'
     finally:
         os.getcwd = getcwd_orig
-        _cleanup()
+        _cleanup(test_data_dir)
 
 
+@patch('caom2utils.data_util.get_local_file_headers')
 @patch('subaru2caom2.composable.Client')
 @patch('subaru2caom2.preview_augmentation.visit')
 @patch('subaru2caom2.transfer.VoTransferCheck')
@@ -149,93 +153,83 @@ def test_run_store_ingest(
         transferrer_mock,
         visit_mock,
         vo_mock,
+        headers_mock,
+        test_data_dir,
+        test_config,
+        tmp_path,
 ):
-    an_hour_ago = datetime.now(tz=timezone.utc) - timedelta(hours=1)
+    an_hour_ago = datetime.now() - timedelta(hours=1)
     m_time = an_hour_ago + timedelta(minutes=10)
     temp_deque = deque()
-    dir_entry = dsc.StateRunnerMeta(
-        'vos:goliaths/test/SUPA0017978p.fits.fz', m_time.timestamp()
-    )
+    dir_entry = dsc.StateRunnerMeta('vos:goliaths/test/SUPA0017978p.fits.fz', m_time)
     temp_deque.append(dir_entry)
     data_source_mock.side_effect = [temp_deque, deque()]
     repo_client_mock.return_value.read.return_value = None
+    headers_mock.return_value = ac.make_headers_from_file(f'{test_data_dir}/SCLA.285.288.W-J-V.fits.header')
 
     def _visit_mock(
-        obs,
+        observation,
         working_directory=None,
-        cadc_client=None,
-        caom_repo_client=None,
-        stream=None,
+        clients=None,
         storage_name=None,
         metadata_reader=None,
         observable=None,
+        config=test_config,
     ):
-        return obs
+        return observation
     visit_mock.side_effect = _visit_mock
 
     cwd = os.getcwd()
-    with TemporaryDirectory() as tmp_dir_name:
-        os.chdir(tmp_dir_name)
-        test_config = mc.Config()
-        test_config.working_directory = tmp_dir_name
-        test_config.task_types = [mc.TaskType.STORE, mc.TaskType.INGEST]
-        test_config.data_sources = ['vos:goliaths/test']
-        test_config.data_source_extensions = ['.fits.fz']
-        test_config.logging_level = 'INFO'
-        test_config.proxy_file_name = 'cadcproxy.pem'
-        test_config.proxy_fqn = f'{tmp_dir_name}/cadcproxy.pem'
-        test_config.state_file_name = 'state.yml'
-        test_config.state_fqn = f'{tmp_dir_name}/state.yml'
-        test_config.interval = 100
-        test_config.features.supports_latest_client = True
-        mc.Config.write_to_file(test_config)
-        with open(test_config.proxy_fqn, 'w') as f:
-            f.write('test content')
-        with open(test_config.state_fqn, 'w') as f:
-            f.write(
-                f'bookmarks:\n  {SCLA_BOOKMARK}:\n'
-                f'    last_record: {an_hour_ago}\n'
-            )
-        getcwd_orig = os.getcwd
-        os.getcwd = Mock(return_value=tmp_dir_name)
-        try:
-            test_result = composable._run_state()
-            assert test_result is not None, 'expect result'
-            assert test_result == 0, 'expect success'
-            assert transferrer_mock.return_value.get.called, 'get not called'
-            transferrer_mock.return_value.get.assert_called_with(
-                'vos:goliaths/test/SUPA0017978p.fits.fz',
-                f'{tmp_dir_name}/SUPA0017978/SUPA0017978p.fits.fz',
-            ), 'wrong args'
-            assert repo_client_mock.return_value.read.called, 'read called'
-            # make sure data is not being written to CADC storage :)
-            assert (
-                data_client_mock.return_value.put.called
-            ), 'put should be called'
-            assert (
-                    data_client_mock.return_value.put.call_count == 1
-            ), 'wrong number of puts'
-            data_client_mock.return_value.put.assert_called_with(
-                f'{tmp_dir_name}/SUPA0017978',
-                'cadc:SUBARUCADC/SUPA0017978p.fits.fz',
-                None,
-            )
-            assert vo_mock.return_value.copy.called, 'copy'
-            vo_mock.return_value.copy.assert_called_with(
-                'vos:goliaths/test/SUPA0017978p.fits.fz', ANY, head=True
-            ), 'wrong copy parameters'
-            assert vo_mock.return_value.get_node.called, 'get_node'
-            vo_mock.return_value.get_node.assert_called_with(
-                'vos:goliaths/test/SUPA0017978p.fits.fz',
-                limit=None,
-                force=False,
-            ), 'wrong get_node parameters'
-        finally:
-            os.getcwd = getcwd_orig
-            os.chdir(cwd)
+    os.chdir(tmp_path)
+    test_config.change_working_directory(tmp_path)
+    test_config.task_types = [mc.TaskType.STORE, mc.TaskType.INGEST]
+    test_config.data_sources = ['vos:goliaths/test']
+    test_config.data_source_extensions = ['.fits.fz']
+    test_config.logging_level = 'INFO'
+    test_config.proxy_file_name = 'cadcproxy.pem'
+    test_config.interval = 100
+    mc.Config.write_to_file(test_config)
+    with open(test_config.proxy_fqn, 'w') as f:
+        f.write('test content')
+    with open(test_config.state_fqn, 'w') as f:
+        f.write(
+            f'bookmarks:\n  {test_config.bookmark}:\n'
+            f'    last_record: {an_hour_ago}\n'
+        )
+    try:
+        test_result = composable._run_state()
+        assert test_result is not None, 'expect result'
+        assert test_result == 0, 'expect success'
+        assert transferrer_mock.return_value.get.called, 'get not called'
+        transferrer_mock.return_value.get.assert_called_with(
+            'vos:goliaths/test/SUPA0017978p.fits.fz', f'{tmp_path}/SUPA0017978/SUPA0017978p.fits.fz'
+        ), 'wrong args'
+        assert repo_client_mock.return_value.read.called, 'read called'
+        # make sure data is not being written to CADC storage :)
+        assert (
+            data_client_mock.return_value.put.called
+        ), 'put should be called'
+        assert (
+                data_client_mock.return_value.put.call_count == 1
+        ), 'wrong number of puts'
+        data_client_mock.return_value.put.assert_called_with(
+            f'{tmp_path}/SUPA0017978', 'cadc:SUBARUCADC/SUPA0017978p.fits.fz'
+        )
+        assert vo_mock.return_value.copy.called, 'copy'
+        vo_mock.return_value.copy.assert_called_with(
+            'vos:goliaths/test/SUPA0017978p.fits.fz', ANY, head=True
+        ), 'wrong copy parameters'
+        assert vo_mock.return_value.get_node.called, 'get_node'
+        vo_mock.return_value.get_node.assert_called_with(
+            'vos:goliaths/test/SUPA0017978p.fits.fz',
+            limit=None,
+            force=False,
+        ), 'wrong get_node parameters'
+    finally:
+        os.chdir(cwd)
 
 
-def _cleanup():
+def _cleanup(test_data_dir):
     # clean up the files created as a by-product of a run
     for f_name in [
         'data_report.txt',
@@ -244,6 +238,6 @@ def _cleanup():
         'retries.txt',
         'success_log.txt',
     ]:
-        fqn = os.path.join(test_main_app.TEST_DATA_DIR, f_name)
+        fqn = os.path.join(test_data_dir, f_name)
         if os.path.exists(fqn):
             os.unlink(fqn)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # ***********************************************************************
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -73,18 +72,11 @@ from mock import patch
 from cadcdata import FileInfo
 from caom2.diff import get_differences
 from caom2utils.caomvalidator import validate
-from subaru2caom2 import COLLECTION, SubaruName
-from subaru2caom2 import PRODUCER
+from subaru2caom2 import SubaruName
 from caom2pipe import astro_composable as ac
 from caom2pipe import manage_composable as mc
 from caom2pipe import reader_composable as rdc
 from subaru2caom2 import fits2caom2_augmentation
-
-import logging
-
-THIS_DIR = dirname(realpath(__file__))
-TEST_DATA_DIR = join(THIS_DIR, 'data')
-PLUGIN = join(dirname(THIS_DIR), 'main_app.py')
 
 LOOKUP = {
     'SCLA_189.232+62.201': [
@@ -149,30 +141,32 @@ def pytest_generate_tests(metafunc):
 
 
 @patch('caom2utils.data_util.get_local_headers_from_fits')
-def test_visitor(local_headers_mock, test_name):
+def test_visitor(local_headers_mock, test_data_dir, test_config, test_name):
     local_headers_mock.side_effect = ac.make_headers_from_file
 
     observation = None
     for f_name in LOOKUP[test_name]:
-        fqn = f'{TEST_DATA_DIR}/{f_name}.header'
-        storage_name = SubaruName(file_name=f_name, entry=fqn)
+        fqn = f'{test_data_dir}/{f_name}.header'
+        storage_name = SubaruName(fqn)
         file_info = FileInfo(
             id=storage_name.file_uri, file_type='application/fits'
         )
         headers = ac.make_headers_from_file(fqn)
         metadata_reader = rdc.FileMetadataReader()
-        metadata_reader._headers = {storage_name.file_uri: headers}
+        if '.fits' in fqn:
+            metadata_reader._headers = {storage_name.file_uri: headers}
+        else:
+            metadata_reader._headers = {storage_name.file_uri: None}
         metadata_reader._file_info = {storage_name.file_uri: file_info}
         kwargs = {
             'storage_name': storage_name,
             'metadata_reader': metadata_reader,
+            'config': test_config,
         }
         observation = fits2caom2_augmentation.visit(observation, **kwargs)
 
     validate(observation)
-    expected_fqn = (
-        f'{TEST_DATA_DIR}/{test_name}.expected.xml'
-    )
+    expected_fqn = f'{test_data_dir}/{test_name}.expected.xml'
     actual_fqn = expected_fqn.replace('expected', 'actual')
     if not exists(expected_fqn):
         mc.write_obs_to_file(observation, actual_fqn)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # ***********************************************************************
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -67,24 +66,19 @@
 # ***********************************************************************
 #
 
-from mock import patch, Mock
+from mock import Mock
 
 from caom2pipe import manage_composable as mc
 from subaru2caom2 import preview_augmentation, main_app
-import test_main_app
 
 
-def test_visit():
-    test_obs = mc.read_obs_from_file(
-        f'{test_main_app.TEST_DATA_DIR}/SUPA0037434.expected.xml'
-    )
-    test_storage_name = main_app.SubaruName(
-        file_name='SUPA0037434p.fits.fz', entry='SUPA0037434p.fits.fz'
-    )
+def test_visit(test_config, test_data_dir):
+    test_obs = mc.read_obs_from_file(f'{test_data_dir}/SUPA0037434.expected.xml')
+    test_storage_name = main_app.SubaruName(entry='SUPA0037434p.fits.fz')
     test_plane = test_obs.planes[test_storage_name.product_id]
     assert len(test_plane.artifacts) == 1, 'initial conditions'
     kwargs = {
-        'working_directory': test_main_app.TEST_DATA_DIR,
+        'working_directory': test_data_dir,
         'cadc_client': None,
         'storage_name': test_storage_name,
         'observable': Mock(),

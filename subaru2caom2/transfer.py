@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # ***********************************************************************
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -76,7 +75,7 @@ from caom2pipe import transfer_composable as tc
 __all__ = ['VoTransferCheck']
 
 
-class VoTransferCheck(tc.VoFitsTransfer):
+class VoTransferCheck(tc.VoScienceTransfer):
 
     def __init__(self, vo_client, data_client):
         super().__init__(vo_client)

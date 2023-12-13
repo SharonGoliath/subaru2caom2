@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # ***********************************************************************
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -68,11 +67,11 @@
 #
 
 """
-Implements the default entry point functions for the workflow 
+Implements the default entry point functions for the workflow
 application.
 
 'run' executes based on either provided lists of work, or files on disk.
-'run_by_state' executes incrementally, usually based on time-boxed 
+'run_by_state' executes incrementally, usually based on time-boxed
 intervals.
 
 CFHT precedent:
@@ -91,8 +90,6 @@ SCLA:
 import logging
 import sys
 import traceback
-
-from datetime import datetime
 
 from caom2pipe import client_composable as clc
 from caom2pipe import data_source_composable as dsc
@@ -132,7 +129,7 @@ def _run():
             vo_client, clients.data_client
         )
         reader = rdc.VaultReader(vo_client)
-    name_builder = nbc.GuessingBuilder(SubaruName)
+    name_builder = nbc.EntryBuilder(SubaruName)
     return rc.run_by_todo(
         name_builder=name_builder,
         meta_visitors=META_VISITORS,
@@ -170,13 +167,13 @@ def _run_remote():
         vo_client, clients.data_client
     )
     data_source = dsc.VaultDataSource(vo_client, config)
-    name_builder = nbc.GuessingBuilder(SubaruName)
+    name_builder = nbc.EntryBuilder(SubaruName)
     reader = rdc.VaultReader(vo_client)
     return rc.run_by_todo(
         name_builder=name_builder,
         meta_visitors=META_VISITORS,
         data_visitors=DATA_VISITORS,
-        source=data_source,
+        sources=[data_source],
         store_transfer=source_transfer,
         clients=clients,
         metadata_reader=reader,
@@ -201,27 +198,20 @@ def _run_state():
     """
     config = mc.Config()
     config.get_executors()
-    builder = nbc.GuessingBuilder(SubaruName)
+    builder = nbc.EntryBuilder(SubaruName)
     source_client = Client(vospace_certfile=config.proxy_fqn)
     clients = clc.ClientCollection(config)
     data_source = dsc.VaultDataSource(source_client, config)
     source_transfer = transfer.VoTransferCheck(
         source_client, clients.data_client
     )
-    state = mc.State(config.state_fqn)
-    end_timestamp_s = state.bookmarks.get(SCLA_BOOKMARK).get(
-        'end_timestamp', datetime.now()
-    )
-    end_timestamp_dt = mc.make_time_tz(end_timestamp_s)
     reader = rdc.VaultReader(source_client)
     return rc.run_by_state(
         config=config,
         name_builder=builder,
-        bookmark_name=SCLA_BOOKMARK,
         meta_visitors=META_VISITORS,
         data_visitors=DATA_VISITORS,
-        end_time=end_timestamp_dt,
-        source=data_source,
+        sources=[data_source],
         store_transfer=source_transfer,
         clients=clients,
         metadata_reader=reader,

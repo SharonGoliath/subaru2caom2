@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # ***********************************************************************
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -89,12 +88,14 @@ class SubaruPreviewVisitor(mc.PreviewVisitor):
         self._preview_fqn = join(self._working_dir, self._storage_name.prev)
         self._thumb_fqn = join(self._working_dir, self._storage_name.thumb)
         self._vo_client = None
-        if self._cadc_client is not None:
+        if self._clients is not None and self._clients.data_client is not None:
             self._vo_client = Client(
                 vospace_certfile='/usr/src/app/cadcproxy.pem'
             )
 
     def _gen_thumbnail(self):
+        # using PIL.Image because it supports gif, while the default matplotlib implementation
+        # requires an additional install
         self._logger.debug(
             f'Generating thumbnail for file {self._science_fqn}.'
         )

@@ -2,7 +2,7 @@
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 #
-#  (c) 2021.                            (c) 2021.
+#  (c) 2023.                            (c) 2023.
 #  Government of Canada                 Gouvernement du Canada
 #  National Research Council            Conseil national de recherches
 #  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -66,29 +66,30 @@
 # ***********************************************************************
 #
 
-from caom2pipe import manage_composable as mc
-from subaru2caom2 import cleanup_augmentation
+from os.path import dirname, join, realpath
+from caom2pipe.manage_composable import Config, StorageName
+import pytest
+
+COLLECTION = 'SUBARUCADC'
+SCHEME = 'cadc'
+PREVIEW_SCHEME = 'cadc'
 
 
-def test_visit(test_data_dir):
-    # test that it works when it should
-    test_product_id = 'SUPA0155413'
-    test_obs = mc.read_obs_from_file(f'{test_data_dir}/{test_product_id}.xml')
-    assert len(test_obs.planes.values()) == 2, 'wrong plane count pc'
-    test_plane = test_obs.planes[test_product_id]
-    assert len(test_plane.artifacts.values()) == 3, 'wrong artifact count pc'
+@pytest.fixture()
+def test_config():
+    config = Config()
+    config.collection = COLLECTION
+    config.preview_scheme = PREVIEW_SCHEME
+    config.scheme = SCHEME
+    config.logging_level = 'INFO'
+    StorageName.collection = config.collection
+    StorageName.preview_scheme = config.preview_scheme
+    StorageName.scheme = config.scheme
+    return config
 
-    kwargs = {}
-    test_obs = cleanup_augmentation.visit(test_obs, **kwargs)
-    assert len(test_obs.planes.values()) == 1, 'post wrong plane count'
-    assert test_product_id not in test_obs.planes.keys(), 'wrong plane delete'
 
-    # test that it does nothing when it shouldn't
-    for obs_id in ['SCLA.285.288', 'SUPA0017978']:
-        test_obs = mc.read_obs_from_file(f'{test_data_dir}/{obs_id}.expected.xml')
-        initial_count = len(test_obs.planes.values())
-        kwargs = {}
-        test_obs = cleanup_augmentation.visit(test_obs, **kwargs)
-        assert (
-            len(test_obs.planes.values()) == initial_count
-        ), 'post wrong plane count should do nothing'
+@pytest.fixture()
+def test_data_dir():
+    this_dir = dirname(realpath(__file__))
+    return join(this_dir, 'data')
+
